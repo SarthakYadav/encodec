@@ -21,7 +21,7 @@ from .utils import _check_checksum, _linear_overlap_add, _get_checkpoint_url
 
 ROOT_URL = 'https://dl.fbaipublicfiles.com/encodec/v0/'
 
-EncodedFrame = tp.Tuple[torch.Tensor, tp.Optional[torch.Tensor]]
+EncodedFrame = tp.Tuple[torch.Tensor, tp.Optional[torch.Tensor], tp.Optional[torch.Tensor]]
 
 
 class LMModel(nn.Module):
@@ -162,7 +162,7 @@ class EncodecModel(nn.Module):
         codes = self.quantizer.encode(emb, self.frame_rate, self.bandwidth)
         codes = codes.transpose(0, 1)
         # codes is [B, K, T], with T frames, K nb of codebooks.
-        return codes, scale
+        return codes, scale, emb
 
     def decode(self, encoded_frames: tp.List[EncodedFrame]) -> torch.Tensor:
         """Decode the given frames into a waveform.
@@ -178,7 +178,7 @@ class EncodecModel(nn.Module):
         return _linear_overlap_add(frames, self.segment_stride or 1)
 
     def _decode_frame(self, encoded_frame: EncodedFrame) -> torch.Tensor:
-        codes, scale = encoded_frame
+        codes, scale, _ = encoded_frame
         codes = codes.transpose(0, 1)
         emb = self.quantizer.decode(codes)
         out = self.decoder(emb)
